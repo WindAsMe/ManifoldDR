@@ -359,7 +359,7 @@ def find_n_best(Chroms, ObjVs, n):
     index = ObjVs.argsort()
     for i in range(n):
         new_Chroms.append(Chroms[index[i]])
-        new_ObjVs.append(ObjVs[index[i]])
+        new_ObjVs.append([ObjVs[index[i]]])
     return np.array(new_Chroms), np.array(new_ObjVs)
 
 
