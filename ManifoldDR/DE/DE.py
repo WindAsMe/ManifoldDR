@@ -3,7 +3,7 @@ from ManifoldDR.util import help
 from ManifoldDR.model import PolynomialModel
 import geatpy as ea
 import numpy as np
-from sklearn.decomposition import PCA
+import umap
 
 
 def CC(Dim, NIND, MAX_iteration, benchmark, scale_range, groups):
@@ -14,17 +14,15 @@ def CC(Dim, NIND, MAX_iteration, benchmark, scale_range, groups):
     for group in groups:
         ave_dim += len(group)
     ave_dim = int(ave_dim / len(groups))
-    print('ave dim: ', ave_dim)
     for i in range(len(groups)):
-        print(len(groups[i]))
         real_iteration = 0
         while real_iteration < MAX_iteration:
             # if real_iteration == 1 and len(groups[i]) > 20:
-            if real_iteration > 0 and real_iteration % 20 == 0 and len(groups[i]) > ave_dim:
+            if real_iteration > 0 and real_iteration % 20 == 0 and len(groups[i]) > ave_dim and len(groups[i]) > 10:
                 degree = 4
-                new_Dim = int(len(groups[i]) / 5)
-                pca = PCA(n_components=new_Dim)
-                data = pca.fit_transform(initial_Population[i].Chrom)
+                # new_Dim = int(len(groups[i]) / 5)
+                UMap = umap.UMAP(n_components=5)
+                data = UMap.fit_transform(initial_Population[i].Chrom)
                 label = initial_Population[i].ObjV
                 model = PolynomialModel.Regression(degree, data, label)
                 up = []
@@ -33,9 +31,9 @@ def CC(Dim, NIND, MAX_iteration, benchmark, scale_range, groups):
                     up.append(max(data[:, t]))
                     down.append(min(data[:, t]))
                 # Surrogate model optimization
-                model_var_trace, model_obj_trace, model_population = model_Optimization(degree, 10, model, up, down, data)
+                model_var_trace, model_obj_trace, model_population = model_Optimization(degree, 100, model, up, down, data)
 
-                model_data = pca.inverse_transform(model_population.Chrom)
+                model_data = UMap.inverse_transform(model_population.Chrom)
 
                 # Real problem optimization
 
@@ -53,9 +51,12 @@ def CC(Dim, NIND, MAX_iteration, benchmark, scale_range, groups):
                 for d in function_filled_data:
                     obj_function.append(benchmark(d))
 
+                print(obj_model)
+                print(obj_function)
                 initial_Population[i].Chrom, initial_Population[i].ObjV = help.find_n_best(np.vstack((model_data, function_population.Chrom))
                                                                                            , np.array(obj_model + obj_function),
                                                                                            len(model_data))
+
 
                 for element in groups[i]:
                     var_traces[real_iteration, element] = initial_Population[i].Chrom[0][groups[i].index(element)]

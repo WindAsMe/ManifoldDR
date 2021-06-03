@@ -1,12 +1,15 @@
 import numpy as np
+from sklearn.datasets import load_digits
+import matplotlib.pyplot as plt
+import umap
 
-def softmax(x, T):
-    sum = 0
-    for i in x:
-        sum += np.exp(i/T)
+# Digitsで試す
+digits = load_digits()
 
-    for i in x:
-        print(np.exp(i/T)/sum)
-
-
-softmax([0.8, 3, 0.01], T=10)
+# umapで2次元に削減
+reducer = umap.UMAP(n_components=4)
+reducer.fit(digits.data)
+embedding = reducer.transform(digits.data)
+print(embedding.shape)
+embedding = reducer.inverse_transform(embedding)
+print(embedding.shape)
