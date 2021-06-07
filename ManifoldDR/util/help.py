@@ -8,6 +8,7 @@ import geatpy as ea
 import os.path as path
 import heapq
 from sklearn.decomposition import PCA
+from sklearn.manifold import Isomap
 
 
 def create_local_model_data(scale, total_dim, group_dim, current_index, scale_range):
@@ -380,9 +381,9 @@ def inverse_simulate(high_D_origin_pop, low_D_origin_pop, low_D_best_pop, k):
         down.append(min(high_D_origin_pop[:, i]))
     low_D_k_Normal_dis, k_index = k_dis_index(low_D_origin_pop, low_D_best_pop, k)
     high_D_best_pop = []
-    for i in range(len(low_D_k_Normal_dis)):
-        high_D_best_pop.append(distance_Optimization(len(high_D_origin_pop[0]), 100, loss, up, down, low_D_k_Normal_dis[i],
-                                                     k_index[i], high_D_origin_pop))
+    for i in range(len(high_D_origin_pop)):
+        high_D_best_pop.append(list(distance_Optimization(len(high_D_origin_pop[0]), 500, loss, up, down, low_D_k_Normal_dis[i],
+                                                     k_index[i], high_D_origin_pop)))
     return high_D_best_pop
 
 
@@ -438,7 +439,7 @@ def distance_Optimization(Dim, MAX_iteration, loss, up, down, low_D_k_Normal_dis
     [population, obj_trace, var_trace] = myAlgorithm.run()
     # obj_traces.append(obj_trace[0])
 
-    return var_trace, obj_trace, population
+    return var_trace[np.argmin(obj_trace[:, 1])]
 
 
 # Find the k nearest points
@@ -452,11 +453,18 @@ def k_nearest(distances, k):
 
 
 def regularization(k_distances):
+
     k_Normalize_dis = []
-    min_dis = min(k_distances)
-    max_dis = max(k_distances)
+    # Max-min normalization
+    # min_dis = min(k_distances)
+    # max_dis = max(k_distances)
+    # for dis in k_distances:
+    #     k_Normalize_dis.append((dis-min_dis) / (max_dis-min_dis))
+    # return k_Normalize_dis
+    dis_sum = sum(k_distances)
     for dis in k_distances:
-        k_Normalize_dis.append((dis-min_dis) / (max_dis-min_dis))
+        k_Normalize_dis.append(dis/dis_sum)
+    # print(k_Normalize_dis)
     return k_Normalize_dis
 
 
@@ -467,21 +475,14 @@ def distance(point1, point2):
     return np.sqrt(dis)
 
 
-pca = PCA(n_components=2)
 pop_origin = 10*np.random.rand(20, 10)
-pop_low = pca.fit_transform(10*np.random.rand(10, 10))
-best = np.array([
-    [-2.4, 1],
-    [2, 1],
-    [1.3, 3],
-    [1.1, -1],
-    [0.5, 0.1],
-    [-3.2, 1],
-    [-0.1, 0.8],
-    [1, -0.5],
-    [4, 0.14],
-    [1.5, 0.98]
-])
-inverse_simulate(pop_origin, pop_low, best, 3)
-
-
+label = [0] * 20
+isomap = Isomap(n_neighbors=5, n_components=2)
+pop_low = isomap.fit_transform(pop_origin)
+inverse = inverse_simulate(pop_origin, pop_low, pop_low, 5)
+print('origin: ', pop_origin)
+print('low: ', pop_low)
+print('inverse: ')
+print(len(inverse))
+for d in inverse:
+    print(d)
