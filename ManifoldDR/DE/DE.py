@@ -71,8 +71,6 @@ def CC(Dim, NIND, MAX_iteration, benchmark, scale_range, groups):
             real_iteration += 1
 
     var_traces, obj_traces = help.preserve(var_traces, benchmark)
-    x = np.linspace(0, 3000000, len(obj_traces))
-    help.draw_check(x, obj_traces, 'check')
     return var_traces, obj_traces
 
 
