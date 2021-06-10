@@ -7,8 +7,9 @@ from ManifoldDR.DE import MyProblem
 import geatpy as ea
 import os.path as path
 import heapq
-from sklearn.decomposition import PCA
-from sklearn.manifold import Isomap
+import umap
+from sklearn.decomposition import PCA, NMF
+import time
 
 
 def create_local_model_data(scale, total_dim, group_dim, current_index, scale_range):
@@ -367,6 +368,15 @@ def find_n_best(Chroms, ObjVs, n):
     return np.array(new_Chroms), np.array(new_ObjVs)
 
 
+# To reduce the CPU time
+def able_inverse_simulate(DR, high_D_origin_pop, low_D_origin_pop, low_D_best_pop, low_D_best_index, k):
+    high_D_best_pop_sti = inverse_simulate(high_D_origin_pop, low_D_origin_pop, [low_D_best_pop[low_D_best_index]], k)
+    high_D_best_pop_real = DR.inverse_transform(low_D_best_pop)
+    high_D_best_pop_real[low_D_best_index] = high_D_best_pop_sti[0]
+
+    return high_D_best_pop_real
+
+
 # high_D_origin_pop: original population information in high D
 # low_D_origin_pop: original population information in low D
 # low_D_best_pop: best population information in low D
@@ -379,10 +389,11 @@ def inverse_simulate(high_D_origin_pop, low_D_origin_pop, low_D_best_pop, k):
     for i in range(len(high_D_origin_pop[0])):
         up.append(max(high_D_origin_pop[:, i]))
         down.append(min(high_D_origin_pop[:, i]))
+
     low_D_k_Normal_dis, k_index = k_dis_index(low_D_origin_pop, low_D_best_pop, k)
     high_D_best_pop = []
-    for i in range(len(high_D_origin_pop)):
-        high_D_best_pop.append(list(distance_Optimization(len(high_D_origin_pop[0]), 500, loss, up, down, low_D_k_Normal_dis[i],
+    for i in range(len(low_D_best_pop)):
+        high_D_best_pop.append(list(distance_Optimization(len(high_D_origin_pop[0]), 100, loss, up, down, low_D_k_Normal_dis[i],
                                                      k_index[i], high_D_origin_pop)))
     return high_D_best_pop
 
@@ -405,7 +416,7 @@ def loss(low_D_k_Normal_dis, k_index, high_D_origin_pop, individual):
 # k: k nearest parameter(must < len of matrix)
 # Return: normalized k-neighbor distance and index
 def k_dis_index(low_D_origin_pop, low_D_best_pop, k):
-    if k > len(low_D_best_pop):
+    if k > len(low_D_origin_pop):
         return None
     # k_index: save the coordinate of k_neighbor
     # k_Normal_dis: save the normalized distance of k_neighbor
@@ -423,7 +434,6 @@ def k_dis_index(low_D_origin_pop, low_D_best_pop, k):
 
 def distance_Optimization(Dim, MAX_iteration, loss, up, down, low_D_k_Normal_dis, k_index, high_D_origin_pop):
     problem = MyProblem.distanceProblem(Dim, loss, up, down, low_D_k_Normal_dis, k_index, high_D_origin_pop)  # 实例化问题对象
-
     """===========================算法参数设置=========================="""
     Encoding = 'RI'  # 编码方式
     NIND = 50  # 种群规模
@@ -455,16 +465,9 @@ def k_nearest(distances, k):
 def regularization(k_distances):
 
     k_Normalize_dis = []
-    # Max-min normalization
-    # min_dis = min(k_distances)
-    # max_dis = max(k_distances)
-    # for dis in k_distances:
-    #     k_Normalize_dis.append((dis-min_dis) / (max_dis-min_dis))
-    # return k_Normalize_dis
     dis_sum = sum(k_distances)
     for dis in k_distances:
-        k_Normalize_dis.append(dis/dis_sum)
-    # print(k_Normalize_dis)
+        k_Normalize_dis.append((dis/dis_sum))
     return k_Normalize_dis
 
 
@@ -475,14 +478,33 @@ def distance(point1, point2):
     return np.sqrt(dis)
 
 
-pop_origin = 10*np.random.rand(20, 10)
-label = [0] * 20
-isomap = Isomap(n_neighbors=5, n_components=2)
-pop_low = isomap.fit_transform(pop_origin)
-inverse = inverse_simulate(pop_origin, pop_low, pop_low, 5)
-print('origin: ', pop_origin)
-print('low: ', pop_low)
-print('inverse: ')
-print(len(inverse))
-for d in inverse:
-    print(d)
+DRs = [umap.UMAP(n_components=3), PCA(n_components=3), NMF(n_components=3)]
+
+pop_origin = 10 * np.random.rand(50, 100)
+
+for DR in DRs:
+    pop_origin_low = DR.fit_transform(pop_origin)
+    time1 = time.time()
+    inverse_sim = able_inverse_simulate(DR, pop_origin, pop_origin_low, pop_origin_low, low_D_best_index=13, k=3)
+    # inverse_sim = inverse_simulate(pop_origin, pop_origin_low, pop_origin_low, 3)
+
+    time2 = time.time()
+    inverse_real = DR.inverse_transform(pop_origin_low)
+    time3 = time.time()
+
+    delta_stimulate = []
+    delta_real = []
+    for i in range(len(pop_origin)):
+        temp_delta_stimulate = 0
+        temp_delta_real = 0
+        for j in range(len(pop_origin[i])):
+            temp_delta_stimulate += np.abs(pop_origin[i][j] - inverse_sim[i][j])
+            temp_delta_real += np.abs(pop_origin[i][j] - inverse_real[i][j])
+        delta_stimulate.append(temp_delta_stimulate / 100)
+        delta_real.append(temp_delta_real / 100)
+
+    print(pop_origin)
+    print('stimulate: ', np.average(delta_stimulate), 'CPU time: ', time2 - time1)
+    print(inverse_sim)
+    print('real: ', np.average(delta_real), 'CPU time: ', time3 - time2)
+    print(inverse_real)
