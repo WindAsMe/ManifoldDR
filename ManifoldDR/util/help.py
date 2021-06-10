@@ -478,33 +478,33 @@ def distance(point1, point2):
     return np.sqrt(dis)
 
 
-DRs = [umap.UMAP(n_components=3), PCA(n_components=3), NMF(n_components=3)]
-
-pop_origin = 10 * np.random.rand(50, 100)
-
-for DR in DRs:
-    pop_origin_low = DR.fit_transform(pop_origin)
-    time1 = time.time()
-    inverse_sim = able_inverse_simulate(DR, pop_origin, pop_origin_low, pop_origin_low, low_D_best_index=13, k=3)
-    # inverse_sim = inverse_simulate(pop_origin, pop_origin_low, pop_origin_low, 3)
-
-    time2 = time.time()
-    inverse_real = DR.inverse_transform(pop_origin_low)
-    time3 = time.time()
-
-    delta_stimulate = []
-    delta_real = []
-    for i in range(len(pop_origin)):
-        temp_delta_stimulate = 0
-        temp_delta_real = 0
-        for j in range(len(pop_origin[i])):
-            temp_delta_stimulate += np.abs(pop_origin[i][j] - inverse_sim[i][j])
-            temp_delta_real += np.abs(pop_origin[i][j] - inverse_real[i][j])
-        delta_stimulate.append(temp_delta_stimulate / 100)
-        delta_real.append(temp_delta_real / 100)
-
-    print(pop_origin)
-    print('stimulate: ', np.average(delta_stimulate), 'CPU time: ', time2 - time1)
-    print(inverse_sim)
-    print('real: ', np.average(delta_real), 'CPU time: ', time3 - time2)
-    print(inverse_real)
+# DRs = [umap.UMAP(n_components=3), PCA(n_components=3), NMF(n_components=3)]
+#
+# pop_origin = 10 * np.random.rand(50, 100)
+#
+# for DR in DRs:
+#     pop_origin_low = DR.fit_transform(pop_origin)
+#     time1 = time.time()
+#     inverse_sim = able_inverse_simulate(DR, pop_origin, pop_origin_low, pop_origin_low, low_D_best_index=13, k=3)
+#     # inverse_sim = inverse_simulate(pop_origin, pop_origin_low, pop_origin_low, 3)
+#
+#     time2 = time.time()
+#     inverse_real = DR.inverse_transform(pop_origin_low)
+#     time3 = time.time()
+#
+#     delta_stimulate = []
+#     delta_real = []
+#     for i in range(len(pop_origin)):
+#         temp_delta_stimulate = 0
+#         temp_delta_real = 0
+#         for j in range(len(pop_origin[i])):
+#             temp_delta_stimulate += np.abs(pop_origin[i][j] - inverse_sim[i][j])
+#             temp_delta_real += np.abs(pop_origin[i][j] - inverse_real[i][j])
+#         delta_stimulate.append(temp_delta_stimulate / 100)
+#         delta_real.append(temp_delta_real / 100)
+#
+#     print(pop_origin)
+#     print('stimulate: ', np.average(delta_stimulate), 'CPU time: ', time2 - time1)
+#     print(inverse_sim)
+#     print('real: ', np.average(delta_real), 'CPU time: ', time3 - time2)
+#     print(inverse_real)
