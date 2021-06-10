@@ -393,7 +393,7 @@ def inverse_simulate(high_D_origin_pop, low_D_origin_pop, low_D_best_pop, k):
     low_D_k_Normal_dis, k_index = k_dis_index(low_D_origin_pop, low_D_best_pop, k)
     high_D_best_pop = []
     for i in range(len(low_D_best_pop)):
-        high_D_best_pop.append(list(distance_Optimization(len(high_D_origin_pop[0]), 100, loss, up, down, low_D_k_Normal_dis[i],
+        high_D_best_pop.append(list(distance_Optimization(len(high_D_origin_pop[0]), 500, loss, up, down, low_D_k_Normal_dis[i],
                                                      k_index[i], high_D_origin_pop)))
     return high_D_best_pop
 
@@ -467,7 +467,7 @@ def regularization(k_distances):
     k_Normalize_dis = []
     dis_sum = sum(k_distances)
     for dis in k_distances:
-        k_Normalize_dis.append((dis/dis_sum))
+        k_Normalize_dis.append(dis/dis_sum)
     return k_Normalize_dis
 
 
@@ -477,16 +477,17 @@ def distance(point1, point2):
         dis += (point1[i] - point2[i])**2
     return np.sqrt(dis)
 
-
-# DRs = [umap.UMAP(n_components=3), PCA(n_components=3), NMF(n_components=3)]
+# DRs = [umap.UMAP(n_components=3)]
 #
 # pop_origin = 10 * np.random.rand(50, 100)
+#
 #
 # for DR in DRs:
 #     pop_origin_low = DR.fit_transform(pop_origin)
 #     time1 = time.time()
-#     inverse_sim = able_inverse_simulate(DR, pop_origin, pop_origin_low, pop_origin_low, low_D_best_index=13, k=3)
-#     # inverse_sim = inverse_simulate(pop_origin, pop_origin_low, pop_origin_low, 3)
+#     # inverse_sim = able_inverse_simulate(DR, pop_origin, pop_origin_low, pop_origin_low, low_D_best_index=13, k=3)
+#
+#     inverse_sim = inverse_simulate(pop_origin, pop_origin_low, pop_origin_low, 3)
 #
 #     time2 = time.time()
 #     inverse_real = DR.inverse_transform(pop_origin_low)
@@ -503,8 +504,8 @@ def distance(point1, point2):
 #         delta_stimulate.append(temp_delta_stimulate / 100)
 #         delta_real.append(temp_delta_real / 100)
 #
-#     print(pop_origin)
+#     # print(pop_origin)
 #     print('stimulate: ', np.average(delta_stimulate), 'CPU time: ', time2 - time1)
-#     print(inverse_sim)
+#     # print(inverse_sim)
 #     print('real: ', np.average(delta_real), 'CPU time: ', time3 - time2)
-#     print(inverse_real)
+#     # print(inverse_real)
