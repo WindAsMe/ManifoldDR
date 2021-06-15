@@ -393,7 +393,7 @@ def inverse_simulate(high_D_origin_pop, low_D_origin_pop, low_D_best_pop, k):
     low_D_k_Normal_dis, k_index = k_dis_index(low_D_origin_pop, low_D_best_pop, k)
     high_D_best_pop = []
     for i in range(len(low_D_best_pop)):
-        high_D_best_pop.append(list(distance_Optimization(len(high_D_origin_pop[0]), 500, loss, up, down, low_D_k_Normal_dis[i],
+        high_D_best_pop.append(list(distance_Optimization(len(high_D_origin_pop[0]), 1000, loss, up, down, low_D_k_Normal_dis[i],
                                                      k_index[i], high_D_origin_pop)))
     return high_D_best_pop
 
@@ -477,6 +477,16 @@ def distance(point1, point2):
         dis += (point1[i] - point2[i])**2
     return np.sqrt(dis)
 
+
+def enborder(up, down, chrom):
+    temp_chrom = copy.deepcopy(chrom)
+    for j in range(len(temp_chrom[0])):
+        for i in range(len(temp_chrom)):
+            if temp_chrom[i][j] > up[j]:
+                temp_chrom[i][j] = up[j]
+            elif temp_chrom[i][j] < down[j]:
+                temp_chrom[i][j] = down[j]
+    return temp_chrom
 # DRs = [umap.UMAP(n_components=3)]
 #
 # pop_origin = 10 * np.random.rand(50, 100)

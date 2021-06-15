@@ -6,7 +6,7 @@ import numpy as np
 import umap
 
 
-def CC(Dim, NIND, MAX_iteration, benchmark, scale_range, groups):
+def CC_LM(Dim, NIND, MAX_iteration, benchmark, scale_range, groups):
     var_traces = np.zeros((MAX_iteration, Dim))
     based_population = np.zeros(Dim)
     initial_Population = help.initial_population(NIND, groups, [scale_range[1]]*Dim, [scale_range[0]]*Dim, based_population)
@@ -19,7 +19,7 @@ def CC(Dim, NIND, MAX_iteration, benchmark, scale_range, groups):
         real_iteration = 0
         while real_iteration < MAX_iteration:
             # if real_iteration == 1 and len(groups[i]) > 20:
-            if real_iteration > 0 and real_iteration % 20 == 0 and len(groups[i]) > ave_dim and len(groups[i]) > 10:
+            if real_iteration > 0 and real_iteration % 20 == 0:
                 degree = 4
                 UMap = umap.UMAP(n_components=3)
                 data = UMap.fit_transform(initial_Population[i].Chrom)
@@ -38,7 +38,7 @@ def CC(Dim, NIND, MAX_iteration, benchmark, scale_range, groups):
                 # model_data = UMap.inverse_transform(model_population.Chrom)
                 model_data = help.able_inverse_simulate(UMap, initial_Population[i].Chrom, data, model_population.Chrom,
                                                         np.argmin(model_obj_trace), k=k_neighbor)
-
+                model_data = help.enborder([scale_range[1]] * len(model_data[0]), [scale_range[0]] * len(model_data[0]), model_data)
                 # Real problem optimization
                 var_trace, obj_trace, function_population = CC_Optimization(1, benchmark, scale_range, groups[i],
                                                                               based_population, initial_Population[i],
@@ -53,10 +53,9 @@ def CC(Dim, NIND, MAX_iteration, benchmark, scale_range, groups):
                 obj_function = []
                 for d in function_filled_data:
                     obj_function.append(benchmark(d))
-
                 initial_Population[i].Chrom, initial_Population[i].ObjV = help.find_n_best(np.vstack((model_data, function_population.Chrom))
                                                                                            , np.array(obj_model + obj_function),
-                                                                                           len(model_data))
+                                                                                           len(function_population.Chrom))
 
                 for element in groups[i]:
                     var_traces[real_iteration, element] = initial_Population[i].Chrom[0][groups[i].index(element)]
@@ -73,6 +72,39 @@ def CC(Dim, NIND, MAX_iteration, benchmark, scale_range, groups):
     var_traces, obj_traces = help.preserve(var_traces, benchmark)
     return var_traces, obj_traces
 
+
+def CC_L(Dim, NIND, MAX_iteration, benchmark, scale_range, groups):
+    var_traces = np.zeros((MAX_iteration, Dim))
+    based_population = np.zeros(Dim)
+    for i in range(len(groups)):
+        # print(i)
+        var_trace, obj_trace = CC_Optimization_Sy(NIND, MAX_iteration, benchmark, scale_range, groups[i], based_population)
+        for element in groups[i]:
+            var_traces[:, element] = var_trace[:, groups[i].index(element)]
+            based_population[element] = var_trace[np.argmin(obj_trace), groups[i].index(element)]
+
+    var_traces, obj_traces = help.preserve(var_traces, benchmark)
+    return var_traces, obj_traces
+
+
+def CC_Optimization_Sy(NIND, MAX_iteration, benchmark, scale_range, group, based_population):
+    problem = MyProblem.CC_Problem(group, benchmark, scale_range, based_population)  # 实例化问题对象
+
+    """===========================算法参数设置=========================="""
+    Encoding = 'RI'  # 编码方式
+    NIND = NIND * len(group)  # 种群规模
+    Field = ea.crtfld(Encoding, problem.varTypes, problem.ranges, problem.borders)
+    population = ea.Population(Encoding, Field, NIND)
+    population.initChrom()
+    myAlgorithm = ea.soea_DE_currentToBest_1_L_templet(problem, population)
+    myAlgorithm.MAXGEN = MAX_iteration
+    myAlgorithm.drawing = 0
+    """=====================调用算法模板进行种群进化====================="""
+    # [population, obj_trace, var_trace] = myAlgorithm.run(population, MAX_iteration)
+    [population, obj_trace, var_trace] = myAlgorithm.run()
+    # obj_traces.append(obj_trace[0])
+
+    return var_trace, obj_trace[:, 1]
 
 def CC_Optimization(MAX_iteration, benchmark, scale_range, group, based_population, p, real):
     problem = MyProblem.CC_Problem(group, benchmark, scale_range, based_population)  # 实例化问题对象

@@ -109,8 +109,10 @@ class modelProblem(ea.Problem):
         ea.Problem.__init__(self, name, M, maxormins, self.Dim, varTypes, lb, ub, lbin, ubin)
 
     def aimFunc(self, pop):  # 目标函数，pop为传入的种群对象
+
         poly_reg = PolynomialFeatures(degree=self.degree)
-        pop.ObjV = self.model.predict(poly_reg.fit_transform(pop.Chrom))
+        pop.ObjV = np.array(self.model.predict(poly_reg.fit_transform(pop.Chrom))).reshape(-1, 1)
+        # print(pop.ObjV)
 
 
 class distanceProblem(ea.Problem):
