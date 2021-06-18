@@ -1,6 +1,7 @@
 from ManifoldDR.DE import MyProblem, templet
 from ManifoldDR.util import help
 from ManifoldDR.model import PolynomialModel
+from sklearn.decomposition import PCA
 import geatpy as ea
 import numpy as np
 import umap
@@ -11,34 +12,29 @@ def CC_LM(Dim, NIND, MAX_iteration, benchmark, scale_range, groups):
     based_population = np.zeros(Dim)
     initial_Population = help.initial_population(NIND, groups, [scale_range[1]]*Dim, [scale_range[0]]*Dim, based_population)
     ave_dim = 0
-    k_neighbor = 3
     for group in groups:
         ave_dim += len(group)
-    ave_dim = int(ave_dim / len(groups))
+    ave_dim /= len(groups)
     for i in range(len(groups)):
         real_iteration = 0
         while real_iteration < MAX_iteration:
-            # if real_iteration == 1 and len(groups[i]) > 20:
-            if real_iteration > 0 and real_iteration % 20 == 0:
-                degree = 4
-                UMap = umap.UMAP(n_components=3)
-                data = UMap.fit_transform(initial_Population[i].Chrom)
+            if len(groups[i]) > ave_dim and len(groups[i]) > 10 and real_iteration > 0 and real_iteration % 20 == 0:
+                UMap = umap.UMAP(n_components=2)
+                data = initial_Population[i].Chrom
+                fitness = initial_Population[i].ObjV[:, 0]
+                low_D_data = UMap.fit_transform(data)
+                x_range = [min(low_D_data[:, 0]), max(low_D_data[:, 0])]
+                y_range = [min(low_D_data[:, 1]), max(low_D_data[:, 1])]
+                gridx = np.arange(x_range[0], x_range[1], 0.05)
+                gridy = np.arange(y_range[0], y_range[1], 0.05)
 
-                label = initial_Population[i].ObjV
-                model = PolynomialModel.Regression(degree, data, label)
-                up = []
-                down = []
-                for t in range(len(data[0])):
-                    up.append(max(data[:, t]))
-                    down.append(min(data[:, t]))
+                k3d1 = help.Krige_model(gridx, gridy, low_D_data, fitness)
+                indexes, best_fitness = help.find_n_matrix(k3d1, int(len(data) / 10), gridx, gridy)
 
                 # Surrogate model optimization
-                model_var_trace, model_obj_trace, model_population = model_Optimization(degree, 100, model, up, down, data)
 
-                # model_data = UMap.inverse_transform(model_population.Chrom)
-                model_data = help.able_inverse_simulate(UMap, initial_Population[i].Chrom, data, model_population.Chrom,
-                                                        np.argmin(model_obj_trace), k=k_neighbor)
-                model_data = help.enborder([scale_range[1]] * len(model_data[0]), [scale_range[0]] * len(model_data[0]), model_data)
+                model_data = UMap.inverse_transform(indexes)
+
                 # Real problem optimization
                 var_trace, obj_trace, function_population = CC_Optimization(1, benchmark, scale_range, groups[i],
                                                                               based_population, initial_Population[i],
@@ -53,6 +49,8 @@ def CC_LM(Dim, NIND, MAX_iteration, benchmark, scale_range, groups):
                 obj_function = []
                 for d in function_filled_data:
                     obj_function.append(benchmark(d))
+                # print(obj_model)
+                # print(obj_function)
                 initial_Population[i].Chrom, initial_Population[i].ObjV = help.find_n_best(np.vstack((model_data, function_population.Chrom))
                                                                                            , np.array(obj_model + obj_function),
                                                                                            len(function_population.Chrom))
@@ -60,6 +58,7 @@ def CC_LM(Dim, NIND, MAX_iteration, benchmark, scale_range, groups):
                 for element in groups[i]:
                     var_traces[real_iteration, element] = initial_Population[i].Chrom[0][groups[i].index(element)]
                     based_population[element] = initial_Population[i].Chrom[0][groups[i].index(element)]
+
 
             else:
                 var_trace, obj_trace, initial_Population[i] = CC_Optimization(1, benchmark, scale_range, groups[i],
@@ -105,6 +104,7 @@ def CC_Optimization_Sy(NIND, MAX_iteration, benchmark, scale_range, group, based
     # obj_traces.append(obj_trace[0])
 
     return var_trace, obj_trace[:, 1]
+
 
 def CC_Optimization(MAX_iteration, benchmark, scale_range, group, based_population, p, real):
     problem = MyProblem.CC_Problem(group, benchmark, scale_range, based_population)  # 实例化问题对象

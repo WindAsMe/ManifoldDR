@@ -10,6 +10,7 @@ import heapq
 import umap
 from sklearn.decomposition import PCA, NMF
 import time
+from pykrige.ok import OrdinaryKriging
 
 
 def create_local_model_data(scale, total_dim, group_dim, current_index, scale_range):
@@ -386,6 +387,7 @@ def able_inverse_simulate(DR, high_D_origin_pop, low_D_origin_pop, low_D_best_po
 def inverse_simulate(high_D_origin_pop, low_D_origin_pop, low_D_best_pop, k):
     up = []
     down = []
+    high_D_origin_pop = np.array(high_D_origin_pop)
     for i in range(len(high_D_origin_pop[0])):
         up.append(max(high_D_origin_pop[:, i]))
         down.append(min(high_D_origin_pop[:, i]))
@@ -467,7 +469,7 @@ def regularization(k_distances):
     k_Normalize_dis = []
     dis_sum = sum(k_distances)
     for dis in k_distances:
-        k_Normalize_dis.append(dis/dis_sum)
+        k_Normalize_dis.append((dis/dis_sum)**2)
     return k_Normalize_dis
 
 
@@ -478,44 +480,49 @@ def distance(point1, point2):
     return np.sqrt(dis)
 
 
-def enborder(up, down, chrom):
-    temp_chrom = copy.deepcopy(chrom)
-    for j in range(len(temp_chrom[0])):
-        for i in range(len(temp_chrom)):
-            if temp_chrom[i][j] > up[j]:
-                temp_chrom[i][j] = up[j]
-            elif temp_chrom[i][j] < down[j]:
-                temp_chrom[i][j] = down[j]
-    return temp_chrom
-# DRs = [umap.UMAP(n_components=3)]
-#
-# pop_origin = 10 * np.random.rand(50, 100)
-#
-#
-# for DR in DRs:
-#     pop_origin_low = DR.fit_transform(pop_origin)
-#     time1 = time.time()
-#     # inverse_sim = able_inverse_simulate(DR, pop_origin, pop_origin_low, pop_origin_low, low_D_best_index=13, k=3)
-#
-#     inverse_sim = inverse_simulate(pop_origin, pop_origin_low, pop_origin_low, 3)
-#
-#     time2 = time.time()
-#     inverse_real = DR.inverse_transform(pop_origin_low)
-#     time3 = time.time()
-#
-#     delta_stimulate = []
-#     delta_real = []
-#     for i in range(len(pop_origin)):
-#         temp_delta_stimulate = 0
-#         temp_delta_real = 0
-#         for j in range(len(pop_origin[i])):
-#             temp_delta_stimulate += np.abs(pop_origin[i][j] - inverse_sim[i][j])
-#             temp_delta_real += np.abs(pop_origin[i][j] - inverse_real[i][j])
-#         delta_stimulate.append(temp_delta_stimulate / 100)
-#         delta_real.append(temp_delta_real / 100)
-#
-#     # print(pop_origin)
-#     print('stimulate: ', np.average(delta_stimulate), 'CPU time: ', time2 - time1)
-#     # print(inverse_sim)
-#     print('real: ', np.average(delta_real), 'CPU time: ', time3 - time2)
-#     # print(inverse_real)
+def data_split(data, z, percentage):
+    sorted_z = sorted(z)
+    split_fitness = sorted_z[int(len(z) * percentage)]
+    better_data = []
+    better_z = []
+    worse_data = []
+    worse_z = []
+    for index, fitness in enumerate(z):
+        if fitness < split_fitness:
+            better_data.append(data[index])
+            better_z.append(fitness)
+        else:
+            worse_data.append(data[index])
+            worse_z.append(fitness)
+    return better_data, better_z, worse_data, worse_z
+
+
+def Krige_model(gridx, gridy, data, fitness):
+    ok3d = OrdinaryKriging(data[:, 0], data[:, 1], fitness, variogram_model='hole-effect')  # 模型
+    # pykrige提供 linear, power, gaussian, spherical, exponential, hole-effect几种variogram_model可供选择，默认的为linear模型。
+    k3d1, ss3d = ok3d.execute("grid", gridx, gridy)
+    return k3d1
+
+
+def matrix_index(index, dim):
+    row = int(index / dim)
+    column = index % dim
+    return row, column
+
+
+# This function is to process the result of Krige
+# Output is the indexes of best n
+def find_n_matrix(matrix, n, gridx, gridy):
+    temp_matrix = matrix.flatten()
+
+    best_index = temp_matrix.argsort()[:n]
+    indexes = []
+    best_fitness = []
+    for i in best_index:
+        row_x, column_y = matrix_index(i, len(gridy))
+        if row_x > len(gridx) - 1 or column_y > len(gridy) - 1:
+            print(i, row_x, column_y, len(gridx), len(gridy), matrix.shape)
+        indexes.append([gridx[row_x], gridy[column_y]])
+        best_fitness.append(temp_matrix[i])
+    return indexes, best_fitness
+

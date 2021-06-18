@@ -10,8 +10,8 @@ def CC_exe(Dim, func_num, NIND, Max_iteration, scale_range, groups, method):
     print(name, 'Optimization with', method)
 
     """The next is DE optimization"""
-    if method == 'DECC_GM':
-        best_indexes, best_obj_trace = DE.CC_LM(Dim, NIND, Max_iteration-4, function, scale_range, groups)
+    if method == 'DECC_LM':
+        best_indexes, best_obj_trace = DE.CC_LM(Dim, NIND, Max_iteration, function, scale_range, groups)
         help.write_obj_trace(name, method, best_obj_trace)
     else:
         best_indexes, best_obj_trace = DE.CC_L(Dim, NIND, Max_iteration, function, scale_range, groups)
