@@ -17,56 +17,58 @@ def CC_LM(Dim, NIND, MAX_iteration, benchmark, scale_range, groups):
     ave_dim /= len(groups)
     for i in range(len(groups)):
         real_iteration = 0
+        # print('Group ', i)
         while real_iteration < MAX_iteration:
-            if len(groups[i]) > ave_dim and len(groups[i]) > 10 and real_iteration > 0 and real_iteration % 20 == 0:
+            if len(groups[i]) > ave_dim and len(groups[i]) > 10 and real_iteration > 0 and (real_iteration in range(1, 10) or real_iteration % 10 == 0):
                 UMap = umap.UMAP(n_components=2)
                 data = initial_Population[i].Chrom
                 fitness = initial_Population[i].ObjV[:, 0]
                 low_D_data = UMap.fit_transform(data)
+
                 x_range = [min(low_D_data[:, 0]), max(low_D_data[:, 0])]
                 y_range = [min(low_D_data[:, 1]), max(low_D_data[:, 1])]
-                gridx = np.arange(x_range[0], x_range[1], 0.05)
-                gridy = np.arange(y_range[0], y_range[1], 0.05)
+                gridx = np.linspace(x_range[0], x_range[1], 200)
+                gridy = np.linspace(y_range[0], y_range[1], 200)
 
-                k3d1 = help.Krige_model(gridx, gridy, low_D_data, fitness)
-                indexes, best_fitness = help.find_n_matrix(k3d1, int(len(data) / 10), gridx, gridy)
+                k3d1 = help.Krige_model(gridx, gridy, np.array(low_D_data), fitness)
+                indexes, best_fitness = help.find_n_matrix(k3d1, int(len(data) / 30), gridx, gridy)
 
                 # Surrogate model optimization
-
                 model_data = UMap.inverse_transform(indexes)
 
                 # Real problem optimization
-                var_trace, obj_trace, function_population = CC_Optimization(1, benchmark, scale_range, groups[i],
+                var_trace, obj_trace, initial_Population[i] = CC_Optimization(1, benchmark, scale_range, groups[i],
                                                                               based_population, initial_Population[i],
                                                                               real_iteration)
-
-                model_filled_data = help.filling(Dim, model_data, groups[i])
+                # print('Original Problem Opt: ', min(initial_Population[i].ObjV))
+                model_filled_data = help.filling(model_data, groups[i], based_population)
                 obj_model = []
                 for d in model_filled_data:
                     obj_model.append(benchmark(d))
 
-                function_filled_data = help.filling(Dim, function_population.Chrom, groups[i])
+                function_filled_data = help.filling(initial_Population[i].Chrom, groups[i], based_population)
                 obj_function = []
                 for d in function_filled_data:
                     obj_function.append(benchmark(d))
-                # print(obj_model)
-                # print(obj_function)
-                initial_Population[i].Chrom, initial_Population[i].ObjV = help.find_n_best(np.vstack((model_data, function_population.Chrom))
+                # print('  Krige model: ', sorted(obj_model))
+                # print('  Original problem: ', sorted(obj_function))
+                initial_Population[i].Chrom, initial_Population[i].ObjV = help.find_n_best(np.vstack((model_data, initial_Population[i].Chrom))
                                                                                            , np.array(obj_model + obj_function),
-                                                                                           len(function_population.Chrom))
+                                                                                           len(initial_Population[i].Chrom))
 
                 for element in groups[i]:
                     var_traces[real_iteration, element] = initial_Population[i].Chrom[0][groups[i].index(element)]
                     based_population[element] = initial_Population[i].Chrom[0][groups[i].index(element)]
-
-
+                initial_Population[i].shuffle()
             else:
                 var_trace, obj_trace, initial_Population[i] = CC_Optimization(1, benchmark, scale_range, groups[i],
                                                         based_population, initial_Population[i], real_iteration)
+
                 for element in groups[i]:
                     var_traces[real_iteration, element] = var_trace[1, groups[i].index(element)]
                     based_population[element] = var_trace[1, groups[i].index(element)]
             real_iteration += 1
+            # print('min objV: ', min(initial_Population[i].ObjV))
 
     var_traces, obj_traces = help.preserve(var_traces, benchmark)
     return var_traces, obj_traces
@@ -118,7 +120,7 @@ def CC_Optimization(MAX_iteration, benchmark, scale_range, group, based_populati
     # [population, obj_trace, var_trace] = myAlgorithm.run(population, MAX_iteration)
     [population, obj_trace, var_trace] = myAlgorithm.run(real)
     # obj_traces.append(obj_trace[0])
-
+    # print('trace: ', obj_trace[:, 1])
     return var_trace, obj_trace, population
 
 

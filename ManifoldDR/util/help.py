@@ -7,9 +7,6 @@ from ManifoldDR.DE import MyProblem
 import geatpy as ea
 import os.path as path
 import heapq
-import umap
-from sklearn.decomposition import PCA, NMF
-import time
 from pykrige.ok import OrdinaryKriging
 
 
@@ -68,20 +65,6 @@ def not_zero_feature(coef, feature_names):
             new_coef.append(coef[i])
             new_feature_names.append(feature_names[i])
     return new_coef, new_feature_names
-
-
-def have_same_element(l1, l2):
-    for e in l1:
-        if e in l2:
-            return True
-    return False
-
-
-def list_combination(l1, l2):
-    for l in l2:
-        if l not in l1:
-            l1.append(l)
-    return l1
 
 
 def group_DFS(Dim, feature_names, max_variable_num):
@@ -258,29 +241,6 @@ def DG_Differential(e1, e2, a, function, intercept):
     return np.abs(c - (a + b)) < 0.001
 
 
-# Return: True(separable) False(none-separable)
-# e1 < e2
-def LIDI_R(e1, e2, function, intercept, one_bias):
-    index = np.zeros((1, 1000))[0]
-    index[e1] = 1
-    index[e2] = 1
-    # intercept: f(0,0)
-    c = function(index)-intercept  # f(1,1)-f(0,0)
-    b = one_bias[e1]  # f(0,1)-f(0,0)
-    a = one_bias[e2]  # f(1,0)-f(0,0)
-
-    return signal(c-b) == signal(a) and signal(c-a) == signal(b)
-
-
-def signal(delta):
-    if delta > 0:
-        return 1
-    elif delta == 0:
-        return 0
-    else:
-        return -1
-
-
 # Return True means proper
 def check_proper(groups):
     flag = [False] * 1000
@@ -351,8 +311,8 @@ def draw_error(f):
     plt.show()
 
 
-def filling(Dim, data, group):
-    temp_data = np.zeros((len(data), Dim))
+def filling(data, group, based_population):
+    temp_data = np.array([based_population] * len(data))
     data = np.array(data)
     for i in range(len(group)):
         temp_data[:, group[i]] = data[:, i]
