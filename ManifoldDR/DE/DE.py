@@ -1,9 +1,7 @@
 from ManifoldDR.DE import MyProblem, templet
 from ManifoldDR.util import help
-from ManifoldDR.model import PolynomialModel
-from sklearn.decomposition import PCA
-import geatpy as ea
 import numpy as np
+import geatpy as ea
 import umap
 
 
@@ -11,59 +9,87 @@ def CC_LM(Dim, NIND, MAX_iteration, benchmark, scale_range, groups):
     var_traces = np.zeros((MAX_iteration, Dim))
     based_population = np.zeros(Dim)
     initial_Population = help.initial_population(NIND, groups, [scale_range[1]]*Dim, [scale_range[0]]*Dim, based_population)
+
     ave_dim = 0
     for group in groups:
         ave_dim += len(group)
     ave_dim /= len(groups)
     for i in range(len(groups)):
         real_iteration = 0
-        # print('Group ', i)
+
+        """=================算法模板参数设定============================"""
+        problem = MyProblem.CC_Problem(groups[i], benchmark, scale_range, based_population)
+        Algorithm = templet.soea_DE_currentToBest_1_L_templet(problem, initial_Population[i])
+        Algorithm.call_aimFunc(initial_Population[i])
+
         while real_iteration < MAX_iteration:
-            if len(groups[i]) > ave_dim and len(groups[i]) > 10 and real_iteration > 0 and (real_iteration in range(1, 10) or real_iteration % 10 == 0):
+            if len(groups[i]) > 3 and len(groups[i]) > ave_dim and real_iteration % 5 == 1:
+
                 UMap = umap.UMAP(n_components=2)
                 data = initial_Population[i].Chrom
                 fitness = initial_Population[i].ObjV[:, 0]
-                low_D_data = UMap.fit_transform(data)
 
+                # Worse data is to build Krige model
+                # Better data is to participate DE
+                better_data, better_z, worse_data, worse_z = help.data_split(data, fitness, 0.5)
+
+                low_D_data = UMap.fit_transform(worse_data)
                 x_range = [min(low_D_data[:, 0]), max(low_D_data[:, 0])]
                 y_range = [min(low_D_data[:, 1]), max(low_D_data[:, 1])]
-                gridx = np.linspace(x_range[0], x_range[1], 200)
-                gridy = np.linspace(y_range[0], y_range[1], 200)
+                gridx = np.linspace(x_range[0], x_range[1], 100)
+                gridy = np.linspace(y_range[0], y_range[1], 100)
 
-                k3d1 = help.Krige_model(gridx, gridy, np.array(low_D_data), fitness)
-                indexes, best_fitness = help.find_n_matrix(k3d1, int(len(data) / 30), gridx, gridy)
-
-                # Surrogate model optimization
+                # Surrogate model building & optimization & data restore depending on worse data
+                k3d1 = help.Krige_model(gridx, gridy, np.array(low_D_data), worse_z)
+                indexes, best_fitness = help.find_n_matrix(k3d1, len(low_D_data), gridx, gridy)
                 model_data = UMap.inverse_transform(indexes)
 
                 # Real problem optimization
-                var_trace, obj_trace, initial_Population[i] = CC_Optimization(1, benchmark, scale_range, groups[i],
-                                                                              based_population, initial_Population[i],
-                                                                              real_iteration)
-                # print('Original Problem Opt: ', min(initial_Population[i].ObjV))
-                model_filled_data = help.filling(model_data, groups[i], based_population)
-                obj_model = []
-                for d in model_filled_data:
-                    obj_model.append(benchmark(d))
+                """=================算法模板参数设定============================"""
 
-                function_filled_data = help.filling(initial_Population[i].Chrom, groups[i], based_population)
-                obj_function = []
-                for d in function_filled_data:
-                    obj_function.append(benchmark(d))
+                # Define the new population for separate Optimization
+                problem = MyProblem.CC_Problem(groups[i], benchmark, scale_range, based_population)
+                Field = ea.crtfld('RI', problem.varTypes, problem.ranges, problem.borders)
+                temp_Population = ea.Population('RI', Field, NIND)
+                temp_Population.initChrom(len(better_data))
+
+                temp_Population.Chrom = better_data
+                temp_Population.Phen = better_data
+                temp_Population.ObjV = better_z.reshape(-1, 1)
+
+                # Execute the optimization
+                Algorithm = templet.soea_DE_currentToBest_1_L_templet(problem, temp_Population)
+                Algorithm.drawing = 0
+                Algorithm.MAXGEN = 1
+                temp_Population, obj_trace, var_trace = Algorithm.run()
+
+                # Fill the chrom and evaluate
+                model_filled_data, obj_model = help.filling(model_data, groups[i], based_population, benchmark)
                 # print('  Krige model: ', sorted(obj_model))
                 # print('  Original problem: ', sorted(obj_function))
-                initial_Population[i].Chrom, initial_Population[i].ObjV = help.find_n_best(np.vstack((model_data, initial_Population[i].Chrom))
-                                                                                           , np.array(obj_model + obj_function),
-                                                                                           len(initial_Population[i].Chrom))
+
+                Chrom, ObjV = help.find_n_best(np.vstack((worse_data, model_data)),
+                                               np.append(worse_z, obj_model), len(worse_data))
+
+                initial_Population[i].Chrom = np.vstack((Chrom, temp_Population.Chrom))
+                initial_Population[i].Phen = np.vstack((Chrom, temp_Population.Chrom))
+                initial_Population[i].ObjV = np.append(ObjV, temp_Population.ObjV[:, 0]).reshape(-1, 1)
+
+                best_index = np.argmin(initial_Population[i].ObjV[:, 0])
 
                 for element in groups[i]:
-                    var_traces[real_iteration, element] = initial_Population[i].Chrom[0][groups[i].index(element)]
-                    based_population[element] = initial_Population[i].Chrom[0][groups[i].index(element)]
+                    var_traces[real_iteration, element] = initial_Population[i].Chrom[best_index][groups[i].index(element)]
+                    based_population[element] = initial_Population[i].Chrom[best_index][groups[i].index(element)]
                 initial_Population[i].shuffle()
             else:
-                var_trace, obj_trace, initial_Population[i] = CC_Optimization(1, benchmark, scale_range, groups[i],
-                                                        based_population, initial_Population[i], real_iteration)
 
+                """=================算法模板参数设定============================"""
+                problem = MyProblem.CC_Problem(groups[i], benchmark, scale_range, based_population)
+                Algorithm = templet.soea_DE_currentToBest_1_L_templet(problem, initial_Population[i])
+                Algorithm.drawing = 0
+                Algorithm.MAXGEN = 1
+                initial_Population[i], obj_trace, var_trace = Algorithm.run()
+                # print('  Else: ', obj_trace)
                 for element in groups[i]:
                     var_traces[real_iteration, element] = var_trace[1, groups[i].index(element)]
                     based_population[element] = var_trace[1, groups[i].index(element)]
@@ -75,74 +101,29 @@ def CC_LM(Dim, NIND, MAX_iteration, benchmark, scale_range, groups):
 
 
 def CC_L(Dim, NIND, MAX_iteration, benchmark, scale_range, groups):
-    var_traces = np.zeros((MAX_iteration, Dim))
+    var_traces = np.zeros((MAX_iteration+1, Dim))
     based_population = np.zeros(Dim)
+    initial_Population = help.initial_population(NIND, groups, [scale_range[1]] * Dim, [scale_range[0]] * Dim,
+                                                 based_population)
     for i in range(len(groups)):
-        # print(i)
-        var_trace, obj_trace = CC_Optimization_Sy(NIND, MAX_iteration, benchmark, scale_range, groups[i], based_population)
+
+        """=================算法模板参数设定============================"""
+
+        problem = MyProblem.CC_Problem(groups[i], benchmark, scale_range, based_population)
+        Algorithm = templet.soea_DE_currentToBest_1_L_templet(problem, initial_Population[i])
+        Algorithm.call_aimFunc(initial_Population[i])
+        Algorithm.MAXGEN = MAX_iteration
+        Algorithm.drawing = 0
+
+        initial_Population[i], obj_trace, var_trace = Algorithm.run()
         for element in groups[i]:
             var_traces[:, element] = var_trace[:, groups[i].index(element)]
-            based_population[element] = var_trace[np.argmin(obj_trace), groups[i].index(element)]
+            based_population[element] = var_trace[np.argmin(obj_trace[:, 1]), groups[i].index(element)]
 
     var_traces, obj_traces = help.preserve(var_traces, benchmark)
     return var_traces, obj_traces
 
 
-def CC_Optimization_Sy(NIND, MAX_iteration, benchmark, scale_range, group, based_population):
-    problem = MyProblem.CC_Problem(group, benchmark, scale_range, based_population)  # 实例化问题对象
 
-    """===========================算法参数设置=========================="""
-    Encoding = 'RI'  # 编码方式
-    NIND = NIND * len(group)  # 种群规模
-    Field = ea.crtfld(Encoding, problem.varTypes, problem.ranges, problem.borders)
-    population = ea.Population(Encoding, Field, NIND)
-    population.initChrom()
-    myAlgorithm = ea.soea_DE_currentToBest_1_L_templet(problem, population)
-    myAlgorithm.MAXGEN = MAX_iteration
-    myAlgorithm.drawing = 0
-    """=====================调用算法模板进行种群进化====================="""
-    # [population, obj_trace, var_trace] = myAlgorithm.run(population, MAX_iteration)
-    [population, obj_trace, var_trace] = myAlgorithm.run()
-    # obj_traces.append(obj_trace[0])
-
-    return var_trace, obj_trace[:, 1]
-
-
-def CC_Optimization(MAX_iteration, benchmark, scale_range, group, based_population, p, real):
-    problem = MyProblem.CC_Problem(group, benchmark, scale_range, based_population)  # 实例化问题对象
-
-    """===========================算法参数设置=========================="""
-
-    myAlgorithm = templet.soea_DE_currentToBest_1_L_templet(problem, p)
-    myAlgorithm.MAXGEN = MAX_iteration
-    myAlgorithm.drawing = 0
-    """=====================调用算法模板进行种群进化====================="""
-    # [population, obj_trace, var_trace] = myAlgorithm.run(population, MAX_iteration)
-    [population, obj_trace, var_trace] = myAlgorithm.run(real)
-    # obj_traces.append(obj_trace[0])
-    # print('trace: ', obj_trace[:, 1])
-    return var_trace, obj_trace, population
-
-
-def model_Optimization(degree, MAX_iteration, model, up, down, data):
-    problem = MyProblem.modelProblem(degree, len(data[0]), model, up, down)  # 实例化问题对象
-
-    """===========================算法参数设置=========================="""
-    Encoding = 'RI'  # 编码方式
-    NIND = len(data)  # 种群规模
-    Field = ea.crtfld(Encoding, problem.varTypes, problem.ranges, problem.borders)  # 创建区域描述器
-    population = ea.Population(Encoding, Field, NIND)  # 实例化种群对象（此时种群还没被初始化，仅仅是完成种群对象的实例化）
-    population.initChrom()
-    population.Chrom = data
-
-    myAlgorithm = ea.soea_DE_currentToBest_1_L_templet(problem, population)
-    myAlgorithm.MAXGEN = MAX_iteration
-    myAlgorithm.drawing = 0
-    """=====================调用算法模板进行种群进化====================="""
-    # [population, obj_trace, var_trace] = myAlgorithm.run(population, MAX_iteration)
-    [population, obj_trace, var_trace] = myAlgorithm.run()
-    # obj_traces.append(obj_trace[0])
-
-    return var_trace, obj_trace[:, 1], population
 
 

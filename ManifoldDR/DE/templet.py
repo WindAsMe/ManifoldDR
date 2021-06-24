@@ -274,15 +274,14 @@ soea_DE_currentToBest_1_L_templet : class - 差分进化DE/current-to-best/1/bin
         else:
             raise RuntimeError('编码方式必须为''RI''.')
 
-    def run(self, flag, prophetPop=None):  # prophetPop为先知种群（即包含先验知识的种群）
+
+    def run(self, prophetPop=None):  # prophetPop为先知种群（即包含先验知识的种群）
         # ==========================初始化配置===========================
         population = self.population
         NIND = population.sizes
         self.initialization()  # 初始化算法模板的一些动态参数
         # ===========================准备进化============================
-        # population.initChrom(NIND)  # 初始化种群染色体矩阵
-        if flag < 1:
-            self.call_aimFunc(population)  # 计算种群的目标函数值
+
         # 插入先验知识（注意：这里不会对先知种群prophetPop的合法性进行检查，故应确保prophetPop是一个种群类且拥有合法的Chrom、ObjV、Phen等属性）
         if prophetPop is not None:
             population = (prophetPop + population)[:NIND]  # 插入先知种群

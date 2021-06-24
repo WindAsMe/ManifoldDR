@@ -11,6 +11,7 @@ from pykrige.ok import OrdinaryKriging
 from ManifoldDR.util import help
 import copy
 import heapq
+import time
 
 
 # 10D
@@ -99,7 +100,7 @@ if __name__ == '__main__':
         fitness = []
         for d in data:
             fitness.append(f(d))
-        print('Random fitness: ', np.average(fitness))
+        print('Random fitness: ', np.average(fitness), min(fitness))
         best_index = np.argmin(fitness)
 
         good_point_origin = np.append(low_D_data[best_index], fitness[best_index])
@@ -116,13 +117,20 @@ if __name__ == '__main__':
         indexes = find_n_matrix(k3d1, n_best, gridx, gridy)
 
         # draw_3D_Point_Best(low_D_data, fitness, good_point_origin, np.array(indexes), best_fitness)
-
-        # high_D_best_pop_real = help.inverse_simulate(data, low_D_data, indexes, k)
+        time1 = time.time()
+        high_D_best_pop_real = help.inverse_simulate(data, low_D_data, indexes, k)
+        time2 = time.time()
+        fit = []
+        for chrom in high_D_best_pop_real:
+            fit.append(f(chrom))
+        print('Simulate inverse: ', np.average(fit), min(fit), 'time: ', time2-time1)
+        time3 = time.time()
         high_D_best_pop_inverse = DR.inverse_transform(indexes)
+        time4 = time.time()
         fit = []
         for chrom in high_D_best_pop_inverse:
             fit.append(f(chrom))
-        print('UMAP inverse: ', np.average(fit), fit)
+        print('UMAP inverse: ', np.average(fit), min(fit), 'time: ', time4-time3)
 
 
 

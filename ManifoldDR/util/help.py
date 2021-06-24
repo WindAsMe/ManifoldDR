@@ -311,12 +311,15 @@ def draw_error(f):
     plt.show()
 
 
-def filling(data, group, based_population):
+def filling(data, group, based_population, benchmark):
     temp_data = np.array([based_population] * len(data))
     data = np.array(data)
+    obj = []
     for i in range(len(group)):
         temp_data[:, group[i]] = data[:, i]
-    return temp_data
+    for d in temp_data:
+        obj.append(benchmark(d))
+    return temp_data, obj
 
 
 def find_n_best(Chroms, ObjVs, n):
@@ -325,7 +328,7 @@ def find_n_best(Chroms, ObjVs, n):
     index = ObjVs.argsort()
     for i in range(n):
         new_Chroms.append(Chroms[index[i]])
-        new_ObjVs.append([ObjVs[index[i]]])
+        new_ObjVs.append(ObjVs[index[i]])
     return np.array(new_Chroms), np.array(new_ObjVs)
 
 
@@ -454,7 +457,7 @@ def data_split(data, z, percentage):
         else:
             worse_data.append(data[index])
             worse_z.append(fitness)
-    return better_data, better_z, worse_data, worse_z
+    return np.array(better_data), np.array(better_z), np.array(worse_data), np.array(worse_z)
 
 
 def Krige_model(gridx, gridy, data, fitness):
@@ -474,15 +477,13 @@ def matrix_index(index, dim):
 # Output is the indexes of best n
 def find_n_matrix(matrix, n, gridx, gridy):
     temp_matrix = matrix.flatten()
-
     best_index = temp_matrix.argsort()[:n]
     indexes = []
     best_fitness = []
     for i in best_index:
         row_x, column_y = matrix_index(i, len(gridy))
-        if row_x > len(gridx) - 1 or column_y > len(gridy) - 1:
-            print(i, row_x, column_y, len(gridx), len(gridy), matrix.shape)
         indexes.append([gridx[row_x], gridy[column_y]])
         best_fitness.append(temp_matrix[i])
     return indexes, best_fitness
+
 
