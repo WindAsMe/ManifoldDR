@@ -869,13 +869,14 @@ if __name__ == '__main__':
     NIND = 30
     bench = Benchmark()
     EFs = 3000000
-    for func_num in range(4, 16):
-        test_time = 3
+    for func_num in range(8, 9):
+        test_time = 4
         name = 'f' + str(func_num)
         benchmark_summary = bench.get_info(func_num)
         scale_range = [benchmark_summary['lower'], benchmark_summary['upper']]
 
         for i in range(test_time):
+
             # LASSO_Groups, LASSO_cost = LASSOCC(func_num)
             # f.CC_exe(Dim, func_num, NIND, int((EFs-LASSO_cost[func_num-1]) / (NIND * Dim) - 1), scale_range,
             #          Groups[func_num-1], 'DECC_L')
