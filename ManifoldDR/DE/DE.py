@@ -25,7 +25,7 @@ def CC_LM(Dim, NIND, MAX_iteration, benchmark, scale_range, groups):
         Algorithm.call_aimFunc(initial_Population[i])
 
         while real_iteration < MAX_iteration:
-            if len(groups[i]) > 3 and len(groups[i]) > ave_dim and real_iteration % 5 == 1:
+            if len(groups[i]) > 3 and len(groups[i]) >= ave_dim and real_iteration % 5 == 1:
 
                 UMap = umap.UMAP(n_components=2)
                 data = initial_Population[i].Chrom
@@ -40,12 +40,12 @@ def CC_LM(Dim, NIND, MAX_iteration, benchmark, scale_range, groups):
                 x_range = [min(low_D_data[:, 0]), max(low_D_data[:, 0])]
                 y_range = [min(low_D_data[:, 1]), max(low_D_data[:, 1])]
 
-                if x_range[0] < x_range[1] and y_range[0] < y_range[1]:
+                interval = 100
+                gridx = np.linspace(x_range[0], x_range[1], interval)
+                gridy = np.linspace(y_range[0], y_range[1], interval)
 
-                    gridx = np.linspace(x_range[0], x_range[1], 100)
-                    gridy = np.linspace(y_range[0], y_range[1], 100)
-
-                    # Surrogate model building & optimization & data restore depending on worse data
+                # Surrogate model building & optimization & data restore depending on worse data
+                try:
                     k3d1 = help.Krige_model(gridx, gridy, np.array(low_D_data), worse_z)
                     indexes, best_fitness = help.find_n_matrix(k3d1, len(low_D_data), gridx, gridy)
                     model_data = UMap.inverse_transform(indexes)
@@ -71,11 +71,10 @@ def CC_LM(Dim, NIND, MAX_iteration, benchmark, scale_range, groups):
 
                     # Fill the chrom and evaluate
                     model_filled_data, obj_model = help.filling(model_data, groups[i], based_population, benchmark)
-                    # print('  Krige model: ', sorted(obj_model))
-                    # print('  Original problem: ', sorted(obj_function))
+
 
                     Chrom, ObjV = help.find_n_best(np.vstack((worse_data, model_data)),
-                                                   np.append(worse_z, obj_model), len(worse_data))
+                                                    np.append(worse_z, obj_model), len(worse_data))
 
                     initial_Population[i].Chrom = np.vstack((Chrom, temp_Population.Chrom))
                     initial_Population[i].Phen = np.vstack((Chrom, temp_Population.Chrom))
@@ -88,8 +87,8 @@ def CC_LM(Dim, NIND, MAX_iteration, benchmark, scale_range, groups):
                             groups[i].index(element)]
                         based_population[element] = initial_Population[i].Chrom[best_index][groups[i].index(element)]
                     initial_Population[i].shuffle()
-                else:
 
+                except ValueError:
                     """=================算法模板参数设定============================"""
 
                     problem = MyProblem.CC_Problem(groups[i], benchmark, scale_range, based_population)
@@ -101,6 +100,7 @@ def CC_LM(Dim, NIND, MAX_iteration, benchmark, scale_range, groups):
                     for element in groups[i]:
                         var_traces[real_iteration, element] = var_trace[1, groups[i].index(element)]
                         based_population[element] = var_trace[1, groups[i].index(element)]
+
             else:
 
                 """=================算法模板参数设定============================"""

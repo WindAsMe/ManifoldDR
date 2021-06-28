@@ -461,7 +461,8 @@ def data_split(data, z, percentage):
 
 
 def Krige_model(gridx, gridy, data, fitness):
-    ok3d = OrdinaryKriging(data[:, 0], data[:, 1], fitness, variogram_model='hole-effect')  # 模型
+
+    ok3d = OrdinaryKriging(data[:, 0], data[:, 1], fitness, variogram_model='exponential')  # 模型
     # pykrige提供 linear, power, gaussian, spherical, exponential, hole-effect几种variogram_model可供选择，默认的为linear模型。
     k3d1, ss3d = ok3d.execute("grid", gridx, gridy)
     return k3d1

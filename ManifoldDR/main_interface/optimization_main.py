@@ -869,18 +869,18 @@ if __name__ == '__main__':
     NIND = 30
     bench = Benchmark()
     EFs = 3000000
-    for func_num in range(8, 9):
-        test_time = 4
+    for func_num in range(4, 16):
+        test_time = 1
         name = 'f' + str(func_num)
         benchmark_summary = bench.get_info(func_num)
         scale_range = [benchmark_summary['lower'], benchmark_summary['upper']]
 
         for i in range(test_time):
-
+            Group = DECC_G(Dim, 10, 100)
             # LASSO_Groups, LASSO_cost = LASSOCC(func_num)
             # f.CC_exe(Dim, func_num, NIND, int((EFs-LASSO_cost[func_num-1]) / (NIND * Dim) - 1), scale_range,
             #          Groups[func_num-1], 'DECC_L')
-            f.CC_exe(Dim, func_num, NIND, int((EFs-LASSO_cost[func_num-1]) / (NIND * Dim) - 1), scale_range,
-                     Groups[func_num-1], 'DECC_LM')
+            f.CC_exe(Dim, func_num, NIND, int((EFs) / (NIND * Dim) - 1), scale_range,
+                     Group, 'DECC_GM')
 
             print('    Finished: ', 'function: ', func_num, 'iteration: ', i + 1, '/', test_time)
