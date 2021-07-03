@@ -8,7 +8,7 @@ import numpy as np
 
 def LASSOCC(func_num):
     Dim = 1000
-    group_dim = 50
+    group_dim = 20
     size = group_dim * 100
     degree = 3
     bench = Benchmark()

@@ -105,27 +105,27 @@ class modelProblem(ea.Problem):
         # print(pop.ObjV)
 
 
-class distanceProblem(ea.Problem):
-    def __init__(self, Dim, loss, up, down, low_D_k_Normal_dis, k_index, high_D_origin_pop):
-        name = 'MyProblem'
-        M = 1
-        self.Dim = Dim
-        self.loss = loss
-        self.low_D_k_Normal_dis = low_D_k_Normal_dis
-        self.k_index = k_index
-        self.high_D_origin_pop = high_D_origin_pop
-        maxormins = [1]
-        varTypes = [0] * self.Dim
-        lb = down
-        ub = up
-        lbin = [1] * self.Dim
-        ubin = [1] * self.Dim
-        ea.Problem.__init__(self, name, M, maxormins, self.Dim, varTypes, lb, ub, lbin, ubin)
-
-    def aimFunc(self, pop):  # 目标函数，pop为传入的种群对象
-        result = []
-        for Chrom in pop.Chrom:
-            # print(Chrom)
-            result.append([self.loss(self.low_D_k_Normal_dis, self.k_index, self.high_D_origin_pop, Chrom)])
-        pop.ObjV = np.array(result)
+# class distanceProblem(ea.Problem):
+#     def __init__(self, Dim, loss, up, down, low_D_k_Normal_dis, k_index, high_D_origin_pop):
+#         name = 'MyProblem'
+#         M = 1
+#         self.Dim = Dim
+#         self.loss = loss
+#         self.low_D_k_Normal_dis = low_D_k_Normal_dis
+#         self.k_index = k_index
+#         self.high_D_origin_pop = high_D_origin_pop
+#         maxormins = [1]
+#         varTypes = [0] * self.Dim
+#         lb = down
+#         ub = up
+#         lbin = [1] * self.Dim
+#         ubin = [1] * self.Dim
+#         ea.Problem.__init__(self, name, M, maxormins, self.Dim, varTypes, lb, ub, lbin, ubin)
+#
+#     def aimFunc(self, pop):  # 目标函数，pop为传入的种群对象
+#         result = []
+#         for Chrom in pop.Chrom:
+#             # print(Chrom)
+#             result.append([self.loss(self.low_D_k_Normal_dis, self.k_index, self.high_D_origin_pop, Chrom)])
+#         pop.ObjV = np.array(result)
 

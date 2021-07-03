@@ -1,4 +1,5 @@
 from ManifoldDR.DE import MyProblem, templet
+from ManifoldDR.model.PolynomialModel import Regression
 from ManifoldDR.util import help
 import numpy as np
 import geatpy as ea
@@ -35,19 +36,26 @@ def CC_LM(Dim, NIND, MAX_iteration, benchmark, scale_range, groups):
                 # Better data is to participate DE
                 better_data, better_z, worse_data, worse_z = help.data_split(data, fitness, 0.5)
 
-                low_D_data = UMap.fit_transform(worse_data)
+                low_D_data = UMap.fit_transform(data)
 
-                x_range = [min(low_D_data[:, 0]), max(low_D_data[:, 0])]
-                y_range = [min(low_D_data[:, 1]), max(low_D_data[:, 1])]
-
-                interval = 100
-                gridx = np.linspace(x_range[0], x_range[1], interval)
-                gridy = np.linspace(y_range[0], y_range[1], interval)
+                # x_range = [min(low_D_data[:, 0]), max(low_D_data[:, 0])]
+                # y_range = [min(low_D_data[:, 1]), max(low_D_data[:, 1])]
+                up = [max(low_D_data[:, 0]), max(low_D_data[:, 1])]
+                down = [min(low_D_data[:, 0]), min(low_D_data[:, 1])]
+                # interval = 100
+                # gridx = np.linspace(x_range[0], x_range[1], interval)
+                # gridy = np.linspace(y_range[0], y_range[1], interval)
 
                 # Surrogate model building & optimization & data restore depending on worse data
                 try:
-                    k3d1 = help.Krige_model(gridx, gridy, np.array(low_D_data), worse_z)
-                    indexes, best_fitness = help.find_n_matrix(k3d1, len(low_D_data), gridx, gridy)
+                    # k3d1 = help.Krige_model(gridx, gridy, np.array(low_D_data), fitness)
+                    # indexes, best_fitness = help.find_n_matrix(k3d1, len(worse_data), gridx, gridy)
+                    degree = 4
+                    reg = Regression(degree, low_D_data, fitness)
+                    model_Population = model_Opt(degree, reg, up, down, low_D_data, fitness)
+                    indexes, best_fitness = help.find_n_matrix(model_Population.Chrom, int(len(low_D_data) / 2),
+                                                               model_Population.ObjV[:, 0])
+
                     model_data = UMap.inverse_transform(indexes)
 
                     # Real problem optimization
@@ -57,6 +65,7 @@ def CC_LM(Dim, NIND, MAX_iteration, benchmark, scale_range, groups):
                     problem = MyProblem.CC_Problem(groups[i], benchmark, scale_range, based_population)
                     Field = ea.crtfld('RI', problem.varTypes, problem.ranges, problem.borders)
                     temp_Population = ea.Population('RI', Field, NIND)
+
                     temp_Population.initChrom(len(better_data))
 
                     temp_Population.Chrom = better_data
@@ -71,7 +80,6 @@ def CC_LM(Dim, NIND, MAX_iteration, benchmark, scale_range, groups):
 
                     # Fill the chrom and evaluate
                     model_filled_data, obj_model = help.filling(model_data, groups[i], based_population, benchmark)
-
 
                     Chrom, ObjV = help.find_n_best(np.vstack((worse_data, model_data)),
                                                     np.append(worse_z, obj_model), len(worse_data))
@@ -145,6 +153,22 @@ def CC_L(Dim, NIND, MAX_iteration, benchmark, scale_range, groups):
     return var_traces, obj_traces
 
 
+def model_Opt(degree, model, up, down, data, fitness):
+    """=================算法模板参数设定============================"""
+    problem = MyProblem.modelProblem(degree, len(data[0]), model, up, down)
+
+    Field = ea.crtfld('RI', problem.varTypes, problem.ranges, problem.borders)
+    population = ea.Population('RI', Field, len(data))
+    population.initChrom(len(data))
+
+    population.Chrom = np.array(data)
+    population.Phen = np.array(data)
+    population.ObjV = np.array(fitness).reshape(-1, 1)
+    Algorithm = templet.soea_DE_currentToBest_1_L_templet(problem, population)
+    Algorithm.MAXGEN = 100
+    Algorithm.drawing = 0
+    model_Population, obj_trace, var_trace = Algorithm.run()
+    return model_Population
 
 
 

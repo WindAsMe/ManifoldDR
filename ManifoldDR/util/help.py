@@ -333,12 +333,12 @@ def find_n_best(Chroms, ObjVs, n):
 
 
 # To reduce the CPU time
-def able_inverse_simulate(DR, high_D_origin_pop, low_D_origin_pop, low_D_best_pop, low_D_best_index, k):
-    high_D_best_pop_sti = inverse_simulate(high_D_origin_pop, low_D_origin_pop, [low_D_best_pop[low_D_best_index]], k)
-    high_D_best_pop_real = DR.inverse_transform(low_D_best_pop)
-    high_D_best_pop_real[low_D_best_index] = high_D_best_pop_sti[0]
-
-    return high_D_best_pop_real
+# def able_inverse_simulate(DR, high_D_origin_pop, low_D_origin_pop, low_D_best_pop, low_D_best_index, k):
+#     high_D_best_pop_sti = inverse_simulate(high_D_origin_pop, low_D_origin_pop, [low_D_best_pop[low_D_best_index]], k)
+#     high_D_best_pop_real = DR.inverse_transform(low_D_best_pop)
+#     high_D_best_pop_real[low_D_best_index] = high_D_best_pop_sti[0]
+#
+#     return high_D_best_pop_real
 
 
 # high_D_origin_pop: original population information in high D
@@ -347,103 +347,103 @@ def able_inverse_simulate(DR, high_D_origin_pop, low_D_origin_pop, low_D_best_po
 # k: k nearest parameter(must < len of matrix)
 
 # Return: best population information in high D
-def inverse_simulate(high_D_origin_pop, low_D_origin_pop, low_D_best_pop, k):
-    up = []
-    down = []
-    high_D_origin_pop = np.array(high_D_origin_pop)
-    for i in range(len(high_D_origin_pop[0])):
-        up.append(max(high_D_origin_pop[:, i]))
-        down.append(min(high_D_origin_pop[:, i]))
-
-    low_D_k_Normal_dis, k_index = k_dis_index(low_D_origin_pop, low_D_best_pop, k)
-    high_D_best_pop = []
-    for i in range(len(low_D_best_pop)):
-        high_D_best_pop.append(list(distance_Optimization(len(high_D_origin_pop[0]), 1000, loss, up, down, low_D_k_Normal_dis[i],
-                                                     k_index[i], high_D_origin_pop)))
-    return high_D_best_pop
-
-
-# delta = ∑_(𝑖=1)^𝑛((𝑑 ̂_𝑖−𝑑_𝑖))^2
-def loss(low_D_k_Normal_dis, k_index, high_D_origin_pop, individual):
-    real_dis = []
-    for index in k_index:
-        real_dis.append(distance(high_D_origin_pop[index], individual))
-    high_D_k_Normal_dis = regularization(real_dis)
-    delta = 0
-    for i in range(len(high_D_k_Normal_dis)):
-        delta += (high_D_k_Normal_dis[i] - low_D_k_Normal_dis[i])**2
-
-    return delta
-
-
-# low_D_origin_pop: original population(Low D)
-# low_D_best_pop: population when optimization stop(Low D)
-# k: k nearest parameter(must < len of matrix)
-# Return: normalized k-neighbor distance and index
-def k_dis_index(low_D_origin_pop, low_D_best_pop, k):
-    if k > len(low_D_origin_pop):
-        return None
-    # k_index: save the coordinate of k_neighbor
-    # k_Normal_dis: save the normalized distance of k_neighbor
-    k_index = []
-    low_D_k_Normal_dis = []
-    for point_elite in low_D_best_pop:
-        point_distances = []
-        for point_original in low_D_origin_pop:
-            point_distances.append(distance(point_original, point_elite))
-        dis, index = k_nearest(point_distances, k)
-        low_D_k_Normal_dis.append(dis)
-        k_index.append(index)
-    return low_D_k_Normal_dis, k_index
-
-
-def distance_Optimization(Dim, MAX_iteration, loss, up, down, low_D_k_Normal_dis, k_index, high_D_origin_pop):
-    problem = MyProblem.distanceProblem(Dim, loss, up, down, low_D_k_Normal_dis, k_index, high_D_origin_pop)  # 实例化问题对象
-    """===========================算法参数设置=========================="""
-    Encoding = 'RI'  # 编码方式
-    NIND = 50  # 种群规模
-    Field = ea.crtfld(Encoding, problem.varTypes, problem.ranges, problem.borders)  # 创建区域描述器
-    population = ea.Population(Encoding, Field, NIND)  # 实例化种群对象（此时种群还没被初始化，仅仅是完成种群对象的实例化）
-    population.initChrom()
-
-    myAlgorithm = ea.soea_DE_currentToBest_1_L_templet(problem, population)
-    myAlgorithm.MAXGEN = MAX_iteration
-    myAlgorithm.drawing = 0
-    """=====================调用算法模板进行种群进化====================="""
-    # [population, obj_trace, var_trace] = myAlgorithm.run(population, MAX_iteration)
-    [population, obj_trace, var_trace] = myAlgorithm.run()
-    # obj_traces.append(obj_trace[0])
-
-    return var_trace[np.argmin(obj_trace[:, 1])]
-
-
-# Find the k nearest points
-def k_nearest(distances, k):
-    k_dis = heapq.nsmallest(k, distances)
-    k_index = []
-    for dis in k_dis:
-        k_index.append(distances.index(dis))
-    k_Normalize_dis = regularization(k_dis)
-    return k_Normalize_dis, k_index
-
-
-def regularization(k_distances):
-
-    k_Normalize_dis = []
-    dis_sum = sum(k_distances)
-    for dis in k_distances:
-        k_Normalize_dis.append((dis/dis_sum)**2)
-    return k_Normalize_dis
-
-
-def distance(point1, point2):
-    dis = 0
-    for i in range(len(point1)):
-        dis += (point1[i] - point2[i])**2
+# def inverse_simulate(high_D_origin_pop, low_D_origin_pop, low_D_best_pop, k):
+#     up = []
+#     down = []
+#     high_D_origin_pop = np.array(high_D_origin_pop)
+#     for i in range(len(high_D_origin_pop[0])):
+#         up.append(max(high_D_origin_pop[:, i]))
+#         down.append(min(high_D_origin_pop[:, i]))
+#
+#     low_D_k_Normal_dis, k_index = k_dis_index(low_D_origin_pop, low_D_best_pop, k)
+#     high_D_best_pop = []
+#     for i in range(len(low_D_best_pop)):
+#         high_D_best_pop.append(list(distance_Optimization(len(high_D_origin_pop[0]), 1000, loss, up, down, low_D_k_Normal_dis[i],
+#                                                      k_index[i], high_D_origin_pop)))
+#     return high_D_best_pop
+#
+#
+# # delta = ∑_(𝑖=1)^𝑛((𝑑 ̂_𝑖−𝑑_𝑖))^2
+# def loss(low_D_k_Normal_dis, k_index, high_D_origin_pop, individual):
+#     real_dis = []
+#     for index in k_index:
+#         real_dis.append(distance(high_D_origin_pop[index], individual))
+#     high_D_k_Normal_dis = regularization(real_dis)
+#     delta = 0
+#     for i in range(len(high_D_k_Normal_dis)):
+#         delta += (high_D_k_Normal_dis[i] - low_D_k_Normal_dis[i])**2
+#
+#     return delta
+#
+#
+# # low_D_origin_pop: original population(Low D)
+# # low_D_best_pop: population when optimization stop(Low D)
+# # k: k nearest parameter(must < len of matrix)
+# # Return: normalized k-neighbor distance and index
+# def k_dis_index(low_D_origin_pop, low_D_best_pop, k):
+#     if k > len(low_D_origin_pop):
+#         return None
+#     # k_index: save the coordinate of k_neighbor
+#     # k_Normal_dis: save the normalized distance of k_neighbor
+#     k_index = []
+#     low_D_k_Normal_dis = []
+#     for point_elite in low_D_best_pop:
+#         point_distances = []
+#         for point_original in low_D_origin_pop:
+#             point_distances.append(distance(point_original, point_elite))
+#         dis, index = k_nearest(point_distances, k)
+#         low_D_k_Normal_dis.append(dis)
+#         k_index.append(index)
+#     return low_D_k_Normal_dis, k_index
+#
+#
+# def distance_Optimization(Dim, MAX_iteration, loss, up, down, low_D_k_Normal_dis, k_index, high_D_origin_pop):
+#     problem = MyProblem.distanceProblem(Dim, loss, up, down, low_D_k_Normal_dis, k_index, high_D_origin_pop)  # 实例化问题对象
+#     """===========================算法参数设置=========================="""
+#     Encoding = 'RI'  # 编码方式
+#     NIND = 50  # 种群规模
+#     Field = ea.crtfld(Encoding, problem.varTypes, problem.ranges, problem.borders)  # 创建区域描述器
+#     population = ea.Population(Encoding, Field, NIND)  # 实例化种群对象（此时种群还没被初始化，仅仅是完成种群对象的实例化）
+#     population.initChrom()
+#
+#     myAlgorithm = ea.soea_DE_currentToBest_1_L_templet(problem, population)
+#     myAlgorithm.MAXGEN = MAX_iteration
+#     myAlgorithm.drawing = 0
+#     """=====================调用算法模板进行种群进化====================="""
+#     # [population, obj_trace, var_trace] = myAlgorithm.run(population, MAX_iteration)
+#     [population, obj_trace, var_trace] = myAlgorithm.run()
+#     # obj_traces.append(obj_trace[0])
+#
+#     return var_trace[np.argmin(obj_trace[:, 1])]
+#
+#
+# # Find the k nearest points
+# def k_nearest(distances, k):
+#     k_dis = heapq.nsmallest(k, distances)
+#     k_index = []
+#     for dis in k_dis:
+#         k_index.append(distances.index(dis))
+#     k_Normalize_dis = regularization(k_dis)
+#     return k_Normalize_dis, k_index
+#
+#
+# def regularization(k_distances):
+#
+#     k_Normalize_dis = []
+#     dis_sum = sum(k_distances)
+#     for dis in k_distances:
+#         k_Normalize_dis.append((dis/dis_sum)**2)
+#     return k_Normalize_dis
+#
+#
+# def distance(point1, point2):
+#     dis = 0
+#     for i in range(len(point1)):
+#         dis += (point1[i] - point2[i])**2
     return np.sqrt(dis)
 
 
-def data_split(data, z, percentage):
+def data_split(data, z, percentage=0.5):
     sorted_z = sorted(z)
     split_fitness = sorted_z[int(len(z) * percentage)]
     better_data = []
@@ -451,7 +451,7 @@ def data_split(data, z, percentage):
     worse_data = []
     worse_z = []
     for index, fitness in enumerate(z):
-        if fitness < split_fitness:
+        if fitness <= split_fitness and len(better_z) < int(len(z) * percentage):
             better_data.append(data[index])
             better_z.append(fitness)
         else:
@@ -461,7 +461,6 @@ def data_split(data, z, percentage):
 
 
 def Krige_model(gridx, gridy, data, fitness):
-
     ok3d = OrdinaryKriging(data[:, 0], data[:, 1], fitness, variogram_model='exponential')  # 模型
     # pykrige提供 linear, power, gaussian, spherical, exponential, hole-effect几种variogram_model可供选择，默认的为linear模型。
     k3d1, ss3d = ok3d.execute("grid", gridx, gridy)
@@ -476,15 +475,25 @@ def matrix_index(index, dim):
 
 # This function is to process the result of Krige
 # Output is the indexes of best n
-def find_n_matrix(matrix, n, gridx, gridy):
-    temp_matrix = matrix.flatten()
-    best_index = temp_matrix.argsort()[:n]
+# def find_n_matrix(matrix, n, gridx, gridy):
+#     temp_matrix = matrix.flatten()
+#     best_index = temp_matrix.argsort()[:n]
+#     indexes = []
+#     best_fitness = []
+#     for i in best_index:
+#         row_x, column_y = matrix_index(i, len(gridy))
+#         indexes.append([gridx[row_x], gridy[column_y]])
+#         best_fitness.append(temp_matrix[i])
+#     return indexes, best_fitness
+
+
+# This function is to process the result of Regression model
+# Output is the indexes of best n
+def find_n_matrix(matrix, n, obj):
+    best_index = obj.argsort()[:n]
     indexes = []
     best_fitness = []
     for i in best_index:
-        row_x, column_y = matrix_index(i, len(gridy))
-        indexes.append([gridx[row_x], gridy[column_y]])
-        best_fitness.append(temp_matrix[i])
+        indexes.append(matrix[i])
+        best_fitness.append(obj[i])
     return indexes, best_fitness
-
-

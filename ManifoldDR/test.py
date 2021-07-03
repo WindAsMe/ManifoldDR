@@ -1,18 +1,6 @@
 from matplotlib import pyplot as plt
-from sklearn.manifold import TSNE
-from sklearn.decomposition import PCA
-import umap
-import geatpy as ea
 import numpy as np
-from sklearn.linear_model import LinearRegression
-from sklearn.preprocessing import PolynomialFeatures
-from ManifoldDR.DE import MyProblem
 from pykrige.ok import OrdinaryKriging
-from ManifoldDR.util import help
-import copy
-import heapq
-import time
-
 
 # 10D
 def Ackley(data):
@@ -83,54 +71,4 @@ def find_n_matrix(matrix, n, gridx, gridy):
         row_x, column_y = matrix_index(i, len(gridy))
         indexes.append([gridx[row_x], gridy[column_y]])
     return indexes
-
-
-if __name__ == '__main__':
-
-    data = np.random.randint(-50, 50, (500, 10))
-    DR = umap.UMAP(n_components=2)
-    methods = ['UMAP']
-    low_D_data = DR.fit_transform(data)
-    range_step = 0.01
-    n_best = 10
-    k = 10
-
-    Functions = [Ackley, Schwefel, Rastrigin]
-    for f in Functions:
-        fitness = []
-        for d in data:
-            fitness.append(f(d))
-        print('Random fitness: ', np.average(fitness), min(fitness))
-        best_index = np.argmin(fitness)
-
-        good_point_origin = np.append(low_D_data[best_index], fitness[best_index])
-        draw_3D_Point(low_D_data, fitness, good_point_origin)
-        x_range = [min(low_D_data[:, 0]), max(low_D_data[:, 0])]
-        y_range = [min(low_D_data[:, 1]), max(low_D_data[:, 1])]
-        gridx = np.arange(x_range[0], x_range[1], range_step)
-        gridy = np.arange(y_range[0], y_range[1], range_step)
-
-
-        # Create Krige model and find best n coordinate in model
-        # This process is instead of model optimization before
-        k3d1 = Krige_model(gridx, gridy, low_D_data, fitness)
-        indexes = find_n_matrix(k3d1, n_best, gridx, gridy)
-
-        # draw_3D_Point_Best(low_D_data, fitness, good_point_origin, np.array(indexes), best_fitness)
-        time1 = time.time()
-        high_D_best_pop_real = help.inverse_simulate(data, low_D_data, indexes, k)
-        time2 = time.time()
-        fit = []
-        for chrom in high_D_best_pop_real:
-            fit.append(f(chrom))
-        print('Simulate inverse: ', np.average(fit), min(fit), 'time: ', time2-time1)
-        time3 = time.time()
-        high_D_best_pop_inverse = DR.inverse_transform(indexes)
-        time4 = time.time()
-        fit = []
-        for chrom in high_D_best_pop_inverse:
-            fit.append(f(chrom))
-        print('UMAP inverse: ', np.average(fit), min(fit), 'time: ', time4-time3)
-
-
 
