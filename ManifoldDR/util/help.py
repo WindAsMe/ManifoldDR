@@ -440,22 +440,22 @@ def find_n_best(Chroms, ObjVs, n):
 #     dis = 0
 #     for i in range(len(point1)):
 #         dis += (point1[i] - point2[i])**2
-    return np.sqrt(dis)
+#    return np.sqrt(dis)
 
 
-def data_split(data, z, percentage=0.5):
+def data_split(data, z):
     sorted_z = sorted(z)
-    split_fitness = sorted_z[int(len(z) * percentage)]
+    split_fitness = sorted_z[int(len(z) * 0.5)]
     better_data = []
     better_z = []
     worse_data = []
     worse_z = []
     for index, fitness in enumerate(z):
-        if fitness <= split_fitness and len(better_z) < int(len(z) * percentage):
+        if fitness <= split_fitness and len(better_z) < int(len(z) * 0.5):
             better_data.append(data[index])
             better_z.append(fitness)
         else:
-            worse_data.append(data[index])
+            worse_data.index(data[index])
             worse_z.append(fitness)
     return np.array(better_data), np.array(better_z), np.array(worse_data), np.array(worse_z)
 
@@ -497,3 +497,4 @@ def find_n_matrix(matrix, n, obj):
         indexes.append(matrix[i])
         best_fitness.append(obj[i])
     return indexes, best_fitness
+
